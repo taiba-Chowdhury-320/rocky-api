@@ -8,7 +8,6 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // cobalt.tools public API ব্যবহার করবো
     const response = await axios.post(
       "https://api.cobalt.tools/",
       {
@@ -27,7 +26,6 @@ module.exports = async (req, res) => {
     const data = response.data;
 
     if (data.status === "redirect" || data.status === "stream") {
-      // Video URL পেয়েছি, এখন download করে পাঠাবো
       const videoRes = await axios({
         method: "get",
         url: data.url,
@@ -39,10 +37,8 @@ module.exports = async (req, res) => {
       res.setHeader("Content-Disposition", `attachment; filename="video.mp4"`);
       videoRes.data.pipe(res);
 
-    } else if (data.status === "error") {
-      return res.status(400).json({ error: data.error?.code || "Download failed" });
     } else {
-      return res.status(400).json({ error: "Unexpected response", data });
+      return res.status(400).json({ error: "Download failed", data });
     }
 
   } catch (err) {
