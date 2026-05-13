@@ -1,6 +1,6 @@
 const axios = require("axios");
 
-module.exports = async (req, res) => {
+export default async function handler(req, res) {
   const { link } = req.query;
 
   if (!link) {
@@ -10,17 +10,8 @@ module.exports = async (req, res) => {
   try {
     const response = await axios.post(
       "https://api.cobalt.tools/",
-      {
-        url: link,
-        downloadMode: "auto",
-        videoQuality: "720"
-      },
-      {
-        headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/json"
-        }
-      }
+      { url: link, downloadMode: "auto", videoQuality: "720" },
+      { headers: { "Accept": "application/json", "Content-Type": "application/json" } }
     );
 
     const data = response.data;
@@ -32,19 +23,13 @@ module.exports = async (req, res) => {
         responseType: "stream",
         timeout: 30000
       });
-
       res.setHeader("Content-Type", "video/mp4");
-      res.setHeader("Content-Disposition", `attachment; filename="video.mp4"`);
       videoRes.data.pipe(res);
-
     } else {
-      return res.status(400).json({ error: "Download failed", data });
+      return res.status(400).json({ error: "Failed", data });
     }
 
   } catch (err) {
-    return res.status(500).json({ 
-      error: "Download failed", 
-      details: err.message 
-    });
+    return res.status(500).json({ error: "Download failed", details: err.message });
   }
-};
+}
