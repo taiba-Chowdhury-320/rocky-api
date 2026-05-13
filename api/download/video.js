@@ -1,8 +1,6 @@
-const express = require("express");
-const ytdl = require("@distube/ytdl-core");
-const app = express();
+const axios = require("axios");
 
-app.get("/api/download/video", async (req, res) => {
+module.exports = async (req, res) => {
   const { link } = req.query;
 
   if (!link) {
@@ -10,31 +8,47 @@ app.get("/api/download/video", async (req, res) => {
   }
 
   try {
-    if (link.includes("youtube.com") || link.includes("youtu.be")) {
-      if (!ytdl.validateURL(link)) {
-        return res.status(400).json({ error: "Invalid YouTube URL" });
+    // cobalt.tools public API ব্যবহার করবো
+    const response = await axios.post(
+      "https://api.cobalt.tools/",
+      {
+        url: link,
+        downloadMode: "auto",
+        videoQuality: "720"
+      },
+      {
+        headers: {
+          "Accept": "application/json",
+          "Content-Type": "application/json"
+        }
       }
+    );
 
-      const info = await ytdl.getInfo(link);
-      const format = ytdl.chooseFormat(info.formats, {
-        quality: "highestvideo",
-        filter: "videoandaudio"
+    const data = response.data;
+
+    if (data.status === "redirect" || data.status === "stream") {
+      // Video URL পেয়েছি, এখন download করে পাঠাবো
+      const videoRes = await axios({
+        method: "get",
+        url: data.url,
+        responseType: "stream",
+        timeout: 30000
       });
 
       res.setHeader("Content-Type", "video/mp4");
       res.setHeader("Content-Disposition", `attachment; filename="video.mp4"`);
-      ytdl(link, { format }).pipe(res);
+      videoRes.data.pipe(res);
 
+    } else if (data.status === "error") {
+      return res.status(400).json({ error: data.error?.code || "Download failed" });
     } else {
-      return res.status(400).json({ 
-        error: "Platform not supported yet",
-        supported: ["YouTube"]
-      });
+      return res.status(400).json({ error: "Unexpected response", data });
     }
 
   } catch (err) {
-    return res.status(500).json({ error: "Download failed", details: err.message });
+    return res.status(500).json({ 
+      error: "Download failed", 
+      details: err.message 
+    });
   }
-});
-
-module.exports = app;
+};
