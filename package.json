@@ -1,6 +1,7 @@
 {
   "name": "rocky-api",
   "version": "1.0.0",
+  "description": "Video Downloader API by Rocky Chowdhury",
   "dependencies": {
     "axios": "^1.7.2"
   }
