@@ -8,57 +8,41 @@ module.exports = async (req, res) => {
   }
 
   try {
-    // Try cobalt.tools API
-    const response = await axios.post(
-      "https://api.cobalt.tools/",
+    // socialdownloader API — free, no key needed
+    const response = await axios.get(
+      `https://social-media-video-downloader.p.rapidapi.com/smvd/get/all`,
       {
-        url: link,
-        videoQuality: "720",
-        downloadMode: "auto"
-      },
-      {
+        params: { url: link },
         headers: {
-          "Accept": "application/json",
-          "Content-Type": "application/json",
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+          "X-RapidAPI-Key": "SIGN-UP-FOR-KEY",
+          "X-RapidAPI-Host": "social-media-video-downloader.p.rapidapi.com"
         },
         timeout: 15000
       }
     );
 
     const data = response.data;
+    const videoUrl = data.links?.[0]?.link;
 
-    // cobalt returns url directly
-    const videoUrl = data.url || (data.status === "redirect" && data.url) || null;
-
-    if (videoUrl) {
-      const videoRes = await axios({
-        method: "get",
-        url: videoUrl,
-        responseType: "stream",
-        timeout: 60000,
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
-        }
-      });
-
-      res.setHeader("Content-Type", "video/mp4");
-      res.setHeader("Content-Disposition", `attachment; filename="rocky_video.mp4"`);
-      videoRes.data.pipe(res);
-
-    } else {
-      return res.status(400).json({
-        error: "No video URL received",
-        cobalt_data: data
-      });
+    if (!videoUrl) {
+      return res.status(400).json({ error: "No video found" });
     }
 
+    const videoRes = await axios({
+      method: "get",
+      url: videoUrl,
+      responseType: "stream",
+      timeout: 60000
+    });
+
+    res.setHeader("Content-Type", "video/mp4");
+    res.setHeader("Content-Disposition", `attachment; filename="video.mp4"`);
+    videoRes.data.pipe(res);
+
   } catch (err) {
-    const errorDetail = err.response?.data || err.message;
-    console.error("Rocky API Error:", errorDetail);
     return res.status(500).json({
       error: "Download failed",
-      details: errorDetail
+      details: err.response?.data || err.message
     });
   }
 };
